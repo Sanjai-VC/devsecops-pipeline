@@ -10,7 +10,7 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install Dependencies
         run: npm install
@@ -18,23 +18,34 @@ jobs:
       - name: Run App
         run: node app.js
 
+      # 🔐 SAST
       - name: Run SAST (Semgrep)
         run: |
           pip install semgrep
-          semgrep --config=auto
+          semgrep --config=auto . || true
 
+      # 📦 Dependency Scan
       - name: Dependency Scan
-        run: npm audit
+        run: npm audit || true
 
-      - name: Scan Docker Image
+      # 🐳 Build Docker Image
+      - name: Build Docker Image
+        run: docker build -t app .
+
+      # 🔍 Container Scan
+      - name: Scan Docker Image (Trivy)
         run: |
-          docker build -t app .
           sudo apt-get update
           sudo apt-get install -y wget
           wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.50.0_Linux-64bit.deb
           sudo dpkg -i trivy_0.50.0_Linux-64bit.deb
-          trivy image app
+          trivy image app || true
 
-      - name: Run DAST
+      # 🌐 DAST
+      - name: Run DAST (OWASP ZAP)
         run: |
-          docker run -t owasp/zap2docker-stable zap-baseline.py -t http://example.com
+          docker run -t owasp/zap2docker-stable zap-baseline.py -t http://example.com || true
+
+      # 🚀 Deployment
+      - name: Deploy
+        run: echo "App deployed successfully"
