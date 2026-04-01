@@ -2,18 +2,39 @@ name: DevSecOps Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    - name: Install Dependencies
-      run: npm install
+      - name: Install Dependencies
+        run: npm install
 
-    - name: Run App
-      run: node app.js
+      - name: Run App
+        run: node app.js
+
+      - name: Run SAST (Semgrep)
+        run: |
+          pip install semgrep
+          semgrep --config=auto
+
+      - name: Dependency Scan
+        run: npm audit
+
+      - name: Scan Docker Image
+        run: |
+          docker build -t app .
+          sudo apt-get update
+          sudo apt-get install -y wget
+          wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.50.0_Linux-64bit.deb
+          sudo dpkg -i trivy_0.50.0_Linux-64bit.deb
+          trivy image app
+
+      - name: Run DAST
+        run: |
+          docker run -t owasp/zap2docker-stable zap-baseline.py -t http://example.com
